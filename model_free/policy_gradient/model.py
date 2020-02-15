@@ -4,10 +4,10 @@ import numpy as np
 
 class DiscretePolicyGradient:
     def __init__(self, obs_space, num_actions,
-                 learning_rate=1e-6,
+                 learning_rate=1e-3,
                  init_epsilon=0.1,
                  fin_epsilon=0,
-                 exploration_frame=1000,
+                 exploration_frame=10000,
                  discount_factor=0.95,
                  mode='visual'
                  ):
@@ -27,8 +27,7 @@ class DiscretePolicyGradient:
         self.mode = mode
         self.replay_buffer = []
         self.model = tf.keras.models.Sequential(self.network())
-        self.model.compile(loss=self.loss_function, optimizer=tf.keras.optimizers.Adam(0.001))
-
+        self.model.compile(loss=self.loss_function, optimizer=tf.keras.optimizers.Adam(self.learning_rate))
         self.time_step = 0
 
     def loss_function(self, action_reward, policy):
@@ -54,10 +53,6 @@ class DiscretePolicyGradient:
         self.time_step += 1
         return action
 
-    def choose_action(self, s):
-        prob = self.model.predict(np.array([s]))[0]
-        return np.random.choice(len(prob), p=prob)
-
     def memory_store(self, obs, action, reward, done):
         self.replay_buffer.append([obs, action, reward])
         if done:
@@ -72,7 +67,6 @@ class DiscretePolicyGradient:
         obs_batch = np.array([record[0] for record in self.replay_buffer])
         action_batch = [[1 if record[1] == i else 0 for i in range(self.num_actions)] for record in self.replay_buffer]
         reward_batch = [record[2] for record in self.replay_buffer]
-        # reward_batch = reward_batch / np.std(reward_batch - np.mean(reward_batch))
         reward_batch = np.expand_dims(reward_batch, axis=1)
         action_reward = np.append(action_batch, reward_batch, axis=1)
         self.model.fit(obs_batch, action_reward)
