@@ -11,11 +11,6 @@ class DiscretePolicyGradient:
                  discount_factor=0.95,
                  mode='visual'
                  ):
-        """
-        :param obs_space: observation space. It should have three dimensions [width, height, channels] in visual model
-        and one dimension in feature mode.
-        :param num_actions: the number of actions. Scalar
-        """
         self.obs_space = obs_space
         self.num_actions = num_actions
         self.learning_rate = learning_rate
@@ -28,6 +23,8 @@ class DiscretePolicyGradient:
         self.replay_buffer = []
         self.model = tf.keras.models.Sequential(self.network())
         self.model.compile(loss=self.loss_function, optimizer=tf.keras.optimizers.Adam(self.learning_rate))
+        self.baseline_model = tf.keras.models.Sequential(self.baseline())
+        self.baseline_model.compile(loss=self.baseline_loss, optimizer=tf.keras.optimizers.Adam(self.learning_rate))
         self.time_step = 0
 
     def loss_function(self, action_reward, policy):
@@ -35,11 +32,22 @@ class DiscretePolicyGradient:
         batch_loss = tf.expand_dims(tf.reduce_sum(-tf.math.log(policy) * action, axis=1), axis=1) * reward
         loss = tf.reduce_sum(batch_loss)
         return loss
+    
+    def baseline_loss(self, reward, state_value):
+        x = reward * state_value
+        loss = tf.reduce_mean(reward * state_value)
+        return loss
 
     def network(self):
         networks = [tf.keras.layers.Dense(100, input_dim=self.obs_space, activation='relu'),
                     tf.keras.layers.Dropout(0.1),
                     tf.keras.layers.Dense(self.num_actions, activation='softmax')]
+        return networks
+    
+    def baseline(self):
+        networks = [tf.keras.layers.Dense(100, input_dim=self.obs_space, activation='relu'),
+                    tf.keras.layers.Dropout(0.1),
+                    tf.keras.layers.Dense(1, activation='sigmoid')]
         return networks
 
     def get_action(self, obs):
@@ -68,6 +76,8 @@ class DiscretePolicyGradient:
         action_batch = [[1 if record[1] == i else 0 for i in range(self.num_actions)] for record in self.replay_buffer]
         reward_batch = [record[2] for record in self.replay_buffer]
         reward_batch = np.expand_dims(reward_batch, axis=1)
+        state_value = self.baseline_model.predict(obs_batch)
+        reward_batch -= state_value
         action_reward = np.append(action_batch, reward_batch, axis=1)
-        self.model.fit(obs_batch, action_reward)
-
+        self.model.fit(obs_batch, action_reward, verbose=2)
+        self.baseline_model.fit(obs_batch, reward_batch,  verbose=2)

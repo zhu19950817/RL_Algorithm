@@ -21,7 +21,7 @@ def plot():
 
 def Com_plot():
     score_list = np.loadtxt('baseline.txt')
-    compare_list = np.loadtxt('Com-baseline.txt')
+    compare_list = np.loadtxt('Com_baseline.txt')
     plt.plot(score_list)
     plt.plot(compare_list)
     x = np.array(range(len(score_list)))

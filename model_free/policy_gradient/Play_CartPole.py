@@ -15,7 +15,7 @@ def play():
     for i in range(episodes):
         score = 0
         obs = env.reset()
-        file = open('baseline.txt', 'a')
+        file = open('Com_baseline.txt', 'a')
         while True:
             action = agent.get_action(obs)
             nxt_obs, reward, done, _ = env.step(action)
