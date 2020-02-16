@@ -1,6 +1,6 @@
 import gym
 import numpy as np
-import model_free.policy_gradient.model as model
+import model
 import tensorflow as tf
 
 env = gym.make('CartPole-v0')

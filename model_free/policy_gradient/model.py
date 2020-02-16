@@ -24,7 +24,7 @@ class DiscretePolicyGradient:
         self.model = tf.keras.models.Sequential(self.network())
         self.model.compile(loss=self.loss_function, optimizer=tf.keras.optimizers.Adam(self.learning_rate))
         self.baseline_model = tf.keras.models.Sequential(self.baseline())
-        self.baseline_model.compile(loss=self.baseline_loss, optimizer=tf.keras.optimizers.Adam(self.learning_rate))
+        self.baseline_model.compile(loss=self.baseline_loss, optimizer=tf.keras.optimizers.Adam(0.01))
         self.time_step = 0
 
     def loss_function(self, action_reward, policy):
@@ -34,8 +34,7 @@ class DiscretePolicyGradient:
         return loss
     
     def baseline_loss(self, reward, state_value):
-        x = reward * state_value
-        loss = tf.reduce_mean(reward * state_value)
+        loss = tf.reduce_mean(-reward * state_value)
         return loss
 
     def network(self):
@@ -46,7 +45,6 @@ class DiscretePolicyGradient:
     
     def baseline(self):
         networks = [tf.keras.layers.Dense(100, input_dim=self.obs_space, activation='relu'),
-                    tf.keras.layers.Dropout(0.1),
                     tf.keras.layers.Dense(1, activation='sigmoid')]
         return networks
 
@@ -79,5 +77,5 @@ class DiscretePolicyGradient:
         state_value = self.baseline_model.predict(obs_batch)
         reward_batch -= state_value
         action_reward = np.append(action_batch, reward_batch, axis=1)
-        self.model.fit(obs_batch, action_reward, verbose=2)
-        self.baseline_model.fit(obs_batch, reward_batch,  verbose=2)
+        self.model.fit(obs_batch, action_reward, verbose=0)
+        self.baseline_model.fit(obs_batch, reward_batch, verbose=0)
